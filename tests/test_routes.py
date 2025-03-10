@@ -12,6 +12,7 @@ from tests.factories import AccountFactory
 from service.common import status  # HTTP Status Codes
 from service.models import db, Account, init_db
 from service.routes import app
+from service.error_handlers import internal_server_error  # Import the error handler
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
@@ -179,3 +180,27 @@ class TestAccountService(TestCase):
         account = self._create_accounts(1)[0]
         resp = self.client.delete(f"{BASE_URL}/{account.id}")
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    ######################################################################
+    #  E R R O R   H A N D L I N G   T E S T S
+    ######################################################################
+    
+    def test_internal_server_error_handler(self):
+        """It should handle 500 Internal Server Error"""
+        
+        # Define a dummy route that raises an exception to trigger the handler
+        @app.route("/cause_500")
+        def cause_500():
+            raise Exception("This is a test server error")
+
+        # Simulate a request that will cause an internal server error
+        response = self.client.get("/cause_500")
+
+        # Parse JSON response
+        data = response.get_json()
+
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(data["error"], "Internal Server Error")
+        self.assertIn("This is a test server error", data["message"])
