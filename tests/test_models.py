@@ -42,6 +42,13 @@ class TestAccount(unittest.TestCase):
         """This runs after each test"""
         db.session.remove()
 
+    def test_repr(self):
+        """It should return the string representation of an Account"""
+        account = AccountFactory(id=1, name="John Doe")
+        expected_repr = "<Account John Doe id=[1]>"
+        self.assertEqual(repr(account), expected_repr)
+
+
     ######################################################################
     #  T E S T   C A S E S
     ######################################################################
