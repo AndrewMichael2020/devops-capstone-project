@@ -150,3 +150,11 @@ class TestAccountService(TestCase):
         self.assertEqual(data["status"], status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEqual(data["error"], "Method not Allowed")
         self.assertIn("message", data)  # Ensure message field exists
+
+    def test_get_account_list(self):
+        """It should Get a list of Accounts"""
+        self._create_accounts(5)
+        resp = self.client.get(BASE_URL)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data), 5)
