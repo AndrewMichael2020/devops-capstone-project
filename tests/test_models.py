@@ -8,11 +8,13 @@ import os
 from service import app
 from service.models import Account, DataValidationError, db
 from tests.factories import AccountFactory
+from service.common import status
 
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql://postgres:postgres@localhost:5432/postgres"
 )
 
+BASE_URL = "/accounts"
 
 ######################################################################
 #  Account   M O D E L   T E S T   C A S E S
@@ -29,6 +31,7 @@ class TestAccount(unittest.TestCase):
         app.logger.setLevel(logging.CRITICAL)
         Account.init_db(app)
 
+
     @classmethod
     def tearDownClass(cls):
         """This runs once after the entire test suite"""
@@ -37,6 +40,7 @@ class TestAccount(unittest.TestCase):
         """This runs before each test"""
         db.session.query(Account).delete()  # clean up the last tests
         db.session.commit()
+        self.client = app.test_client()
 
     def tearDown(self):
         """This runs after each test"""
@@ -182,3 +186,25 @@ class TestAccount(unittest.TestCase):
         """It should not Deserialize an account with a TypeError"""
         account = Account()
         self.assertRaises(DataValidationError, account.deserialize, [])
+
+    def test_update_nonexistent_account(self):
+        """It should return 404 NOT FOUND when updating a non-existent account"""
+        account_id = 99999  # An ID that does not exist
+        updated_data = {
+            "name": "Nonexistent Account",
+            "email": "doesnotexist@example.com",
+            "address": "123 Nowhere St",
+            "phone_number": "000-000-0000",
+            "date_joined": "2025-01-01"
+        }
+
+        # Attempt to update a non-existent account
+        response = self.client.put(f"{BASE_URL}/{account_id}", json=updated_data)
+        
+        # Assertions
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        #  Instead of checking for empty response, check for expected JSON structure
+        data = response.get_json()
+        self.assertEqual(data["error"], "Not Found")
+        self.assertIn(f"Account with id [{account_id}] could not be found.", data["message"])
